@@ -52,8 +52,10 @@ npm install
 npm run dev      # wrangler dev
 npm run check    # tsc
 npm test         # builds, then runs test/*.test.mjs
-npm run deploy
+npm run deploy   # deploys manually
 ```
+
+GitHub Actions runs the checks and tests on every push to `main`, then deploys if they pass. It needs a `CLOUDFLARE_API_TOKEN` repository secret that can edit Workers Scripts and, for the `lucas04.top` zone, Workers Routes.
 
 In `public/_redirects`, the static asset layer handles hops 25 to 2, which don't count as Worker requests. The last hop reaches the Worker, which validates the target. To allow another hostname, edit `src/hop.ts`.
 

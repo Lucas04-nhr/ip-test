@@ -62,7 +62,7 @@ Local checks do not verify production behavior. State exactly what was checked, 
 
 ## Deployment and commits
 
-Do not deploy, commit or push unless explicitly asked. A deployment overwrites the live `ip` Worker that the blog depends on, and `wrangler.jsonc` replaces its current remote settings.
+Do not deploy, commit or push unless explicitly asked. `.github/workflows/deploy.yml` runs the checks and deploys every push to `main`, so pushing to `main` is a deployment. A deployment overwrites the live `ip-test` Worker that the blog depends on, and `wrangler.jsonc` replaces its current remote settings.
 
 Follow the Conventional Commits format: `<type>(<scope>): <description>`.
 
