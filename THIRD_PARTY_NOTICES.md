@@ -1,5 +1,7 @@
 # Third-party notices
 
+This project is licensed under AGPL-3.0. The portions listed below are adapted from MIT-licensed projects and remain available under the MIT License.
+
 `src/me.ts`, `src/dns.ts` and the redirect chain in `src/hop.ts` and `public/_redirects` are adapted from these projects by yt1988, all under the MIT License below:
 
 - https://github.com/yt1988/who-are-you
