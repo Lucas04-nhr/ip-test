@@ -1,0 +1,18 @@
+# TypeScript
+node_modules/
+dist/
+
+# Wrangler
+.wrangler/
+.dev.vars*
+.env*
+
+# Local Development
+.vscode
+
+# macOS Resources
+.DS_Store
+._*
+
+# Local public metadata download artifacts
+/metadata-download*/
