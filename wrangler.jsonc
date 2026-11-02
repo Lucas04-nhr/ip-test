@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "ip",
+  "name": "ip-test",
   "main": "src/index.ts",
   "account_id": "2a190a563d8c90115322b4931de73d5c",
   "compatibility_date": "2026-10-02",
