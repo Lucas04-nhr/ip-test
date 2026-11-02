@@ -25,7 +25,9 @@ Add an endpoint only when a tool cannot work without a server. A measurement of 
 
 ## API contracts
 
-`GET /` is consumed directly by `debugInfo.vue`, `rawJsonOutput.vue` and `chinaMainlandUserDetection.ts` in the blog repository. Keep its response shape compatible and its CORS behavior unchanged. Check those consumers before changing it. New functionality goes under `/v1/`.
+`GET /` is consumed directly by `chinaMainlandUserDetection.ts` in the blog repository, which also runs the site-wide mainland China user detection. Keep its response shape compatible and its CORS behavior unchanged. Check that consumer before changing it. New functionality goes under `/v1/`.
+
+The blog's network tools each have their own page under `docs/tools/` and call the `/v1/` endpoints and `/cdn-cgi/trace`. `docs/.vuepress/theme/utils/networkTools/` holds their shared logic and adapted upstream code; check it before changing a `/v1/` response.
 
 Errors use `{ "error": { "code", "message" } }`. Only `GET`, `HEAD` on hop routes and `OPTIONS` are in use; do not add write endpoints without a clear need. Unknown paths return 404.
 
