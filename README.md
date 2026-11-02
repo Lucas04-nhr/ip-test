@@ -1,64 +1,64 @@
 # ip
 
-部署在 `ip.lucas04.top` 的 Cloudflare Worker，是博客网络工具的统一后端。本仓库只有后端，页面在博客仓库中重构。
+A Cloudflare Worker deployed at `ip.lucas04.top` that serves as the shared backend for the blog's network tools. This repository contains the backend only; the pages are being rebuilt in the blog repository.
 
-工具逻辑来自 [yt1988](https://github.com/yt1988) 的 Speed Test、EgressLens、Who Are You、Unlock Check、CDN Radar、DNS Test 和 IPv6 Test。这些工具的测量大多必须在访客浏览器里完成，服务器代测得到的是 Cloudflare 的线路，而不是访客的线路。所以这里只提供确实需要服务端的部分。
+The tools are adapted from Speed Test, EgressLens, Who Are You, Unlock Check, CDN Radar, DNS Test and IPv6 Test by [yt1988](https://github.com/yt1988). Most of their measurements must run in the visitor's browser, because a server would measure Cloudflare's route rather than the visitor's. This Worker therefore provides only what genuinely needs a server.
 
-## 接口
+## Endpoints
 
-| 接口 | 说明 | 来源限制 |
+| Endpoint | Description | Origin restricted |
 | --- | --- | --- |
-| `GET /` | 完整的连接信息。结构不变，博客现有组件依赖它；`?headers=0` 省略请求头 | 否 |
-| `GET /v1/me` | 精简的连接信息：`ip version country region city lat lon asn org colo http` | 否 |
-| `GET /v1/whoami` | `{ ip, v, cf, h, ptr, at }`：Cloudflare 数据、浏览器发送的请求头（不含 cookie）、PTR、服务器时钟 | 否 |
-| `GET /v1/dns?name=<host>` | 由边缘解析：`{ cnames, ips }`，可缓存 5 分钟 | 是 |
-| `GET /v1/hop/<n>/<host>/<path>` | 跳转 n 次（1 到 25）后到达 `https://<host>/<path>` | 目标白名单 |
-| `GET /v1/hop.txt` | 跳转链的探测目标，用来测浏览器的跳转上限 | 否 |
+| `GET /` | Full connection details. The response shape is unchanged because existing blog components depend on it. `?headers=0` omits the request headers | No |
+| `GET /v1/me` | Compact connection details: `ip version country region city lat lon asn org colo http` | No |
+| `GET /v1/whoami` | `{ ip, v, cf, h, ptr, at }`: Cloudflare's data, the headers the browser sent (without cookies), the PTR record and the server clock | No |
+| `GET /v1/dns?name=<host>` | Resolves a hostname from the edge: `{ cnames, ips }`, cacheable for 5 minutes | Yes |
+| `GET /v1/hop/<n>/<host>/<path>` | Redirects `n` times (1 to 25), ending at `https://<host>/<path>` | Target allowlist |
+| `GET /v1/hop.txt` | The redirect chain's probe target, used to measure a browser's redirect limit | No |
 
-“来源限制”指请求必须带 `*.lucas04.top` 或 `localhost:8080`、`127.0.0.1:8080` 的 `Origin`，否则返回 403。这只能挡住盗链，挡不住伪造请求头的脚本。
+Origin-restricted endpoints return 403 unless the request has an `Origin` of `*.lucas04.top`, `localhost:8080` or `127.0.0.1:8080`. This stops hotlinking, but not scripts that forge the header.
 
-错误统一为 `{ "error": { "code", "message" } }`。
+All errors use the format `{ "error": { "code", "message" } }`.
 
-## 各工具用到什么
+## What each tool uses
 
-上游通过同源路径访问的接口，在博客里要改成下面的跨域地址。
+Upstream reaches its backend through same-origin paths. In the blog, replace those paths with the cross-origin endpoints below.
 
-| 工具 | 上游路径 | 本 Worker | 继续由浏览器直连 |
+| Tool | Upstream path | This Worker | Still called directly from the browser |
 | --- | --- | --- | --- |
-| Speed Test | `/_ms/me` | `/v1/me` | `speed.cloudflare.com`（`/__down`、`/__up`、`/meta`）、M-Lab |
-| EgressLens | `/_ms/me`、`/cdn-cgi/trace` | `/v1/me` | 各出口探针、STUN、`api.ip.sb` |
-| Who Are You | `/api/me`、`/cdn-cgi/trace` | `/v1/whoami`，时延改测 `/v1/me` | STUN、`edns.ip-api.com`、各站点 trace |
-| Unlock Check | `/h/<n>/...`、`/hop.txt`、`/_ms/me` | `/v1/hop/<n>/...`、`/v1/hop.txt`、`/v1/me` | 各服务的探测地址 |
-| CDN Radar | `/geo`、`/dns` | `/v1/me`（`cc` 改读 `country`）、`/v1/dns` | 各 CDN 的探测地址 |
-| DNS Test | `/_ms/me` | `/v1/me` | 各 DoH 解析器 |
-| IPv6 Test | `/_ms/me`、`/cdn-cgi/trace` | `/v1/me` | 各 IPv4、IPv6 探测地址 |
+| Speed Test | `/_ms/me` | `/v1/me` | `speed.cloudflare.com` (`/__down`, `/__up`, `/meta`), M-Lab |
+| EgressLens | `/_ms/me`, `/cdn-cgi/trace` | `/v1/me` | Exit probes, STUN, `api.ip.sb` |
+| Who Are You | `/api/me`, `/cdn-cgi/trace` | `/v1/whoami`, plus `/v1/me` for timing latency | STUN, `edns.ip-api.com`, other sites' traces |
+| Unlock Check | `/h/<n>/...`, `/hop.txt`, `/_ms/me` | `/v1/hop/<n>/...`, `/v1/hop.txt`, `/v1/me` | Each service's probe URLs |
+| CDN Radar | `/geo`, `/dns` | `/v1/me` (read `country` instead of `cc`), `/v1/dns` | Each CDN's probe URLs |
+| DNS Test | `/_ms/me` | `/v1/me` | DoH resolvers |
+| IPv6 Test | `/_ms/me`, `/cdn-cgi/trace` | `/v1/me` | IPv4 and IPv6 probe URLs |
 
-### 移植时要注意
+### Porting notes
 
-- **`/cdn-cgi/trace`**：`kex`、`sni`、`warp` 这些字段 Worker 读不到，请直接请求 `https://ip.lucas04.top/cdn-cgi/trace`。它返回 `Access-Control-Allow-Origin: *`，但没有 `Timing-Allow-Origin`，跨域时读不到详细时序，所以测时延要改用 `/v1/me`。
-- **跳转链**：请求要用 `mode: "no-cors"`，地址写成 `https://ip.lucas04.top/v1/hop/<n>/<host><path><search>`。测上限时的目标是 `https://ip.lucas04.top/v1/hop.txt`。
-- **IPv6 Test**：探测里的 `ipv6.1ms.dog` 是上游自己的域名，要换成你自己的。
+- **`/cdn-cgi/trace`:** A Worker can't read fields such as `kex`, `sni` and `warp`, so request `https://ip.lucas04.top/cdn-cgi/trace` directly. It returns `Access-Control-Allow-Origin: *` but no `Timing-Allow-Origin`, so detailed cross-origin timing is unavailable. Time latency against `/v1/me` instead.
+- **Redirect chain:** Send requests with `mode: "no-cors"` to `https://ip.lucas04.top/v1/hop/<n>/<host><path><search>`. When measuring the redirect limit, the target is `https://ip.lucas04.top/v1/hop.txt`.
+- **IPv6 Test:** The probes use `ipv6.1ms.dog`, which is upstream's own domain. Replace it with your own.
 
-### 不在本仓库的上游功能
+### Upstream features not in this repository
 
-- 分享结果页 `/r/<code>`：上游在服务端改写页面标题和预览信息，它依赖页面本身，应随博客一起考虑。
-- `/rules/*` 代理规则文件：是静态文件，放到博客。
-- DNS Test 命令行工具的分发（`/i`、`/v`、`/dl/*`）。
+- **Shared result pages (`/r/<code>`):** Upstream rewrites the page title and preview metadata on the server. This depends on the pages, so it should be handled along with the blog.
+- **Proxy rule files (`/rules/*`):** These are static files and belong in the blog.
+- **DNS Test command-line tool distribution:** `/i`, `/v` and `/dl/*`.
 
-## 开发
+## Development
 
 ```sh
 npm install
 npm run dev      # wrangler dev
 npm run check    # tsc
-npm test         # 构建后运行 test/*.test.mjs
+npm test         # builds, then runs test/*.test.mjs
 npm run deploy
 ```
 
-`public/_redirects` 中 n 从 25 到 2 的跳转由静态资源层处理，不计 Worker 请求数；最后一跳进入 Worker 校验目标。新增白名单域名请改 `src/hop.ts`。
+In `public/_redirects`, the static asset layer handles hops 25 to 2, which don't count as Worker requests. The last hop reaches the Worker, which validates the target. To allow another hostname, edit `src/hop.ts`.
 
-配置了 custom domain 后，`wrangler dev` 里的请求 host 会变成 `ip.lucas04.top`，所以本地无法用 `localhost` 作为跳转目标。
+With a custom domain configured, `wrangler dev` rewrites the request host to `ip.lucas04.top`, so `localhost` can't be used as a redirect target locally.
 
-## 许可证
+## License
 
-[AGPL-3.0](LICENSE)。第三方代码的声明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+[AGPL-3.0](LICENSE). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for third-party notices.
