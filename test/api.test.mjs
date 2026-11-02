@@ -61,6 +61,16 @@ test("根路径保持博客依赖的结构", async () => {
   assert.equal(data.api.cache, "no-store");
 });
 
+test("根路径按 certPresented 判断是否出示客户端证书", async () => {
+  const presented = async (tlsClientAuth) =>
+    (await (await call("/", { cf: { tlsClientAuth } })).json()).security?.tls
+      ?.clientCertificatePresented;
+
+  assert.equal(await presented({ certPresented: "0", certVerified: "NONE" }), false);
+  assert.equal(await presented({ certPresented: "1", certVerified: "SUCCESS" }), true);
+  assert.equal(await presented(undefined), undefined);
+});
+
 test("根路径脱敏敏感请求头", async () => {
   const data = await (
     await call("/", { headers: { Authorization: "secret", "X-Api-Key": "k" } })

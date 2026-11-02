@@ -228,7 +228,7 @@ export function handleRoot(request: Request, url: URL): Response {
   setIfPresent(tls, "cipher", cf.tlsCipher);
 
   if (cf.tlsClientAuth !== null && cf.tlsClientAuth !== undefined) {
-    tls.clientCertificatePresented = Boolean(cf.tlsClientAuth);
+    tls.clientCertificatePresented = cf.tlsClientAuth.certPresented === "1";
   }
 
   addGroupIfNotEmpty(security, "tls", tls);

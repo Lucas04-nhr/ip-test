@@ -1,4 +1,4 @@
-# ip
+# IP Test Worker
 
 A Cloudflare Worker deployed at `ip.lucas04.top` that serves as the shared backend for the blog's network tools. This repository contains the backend only; the pages are being rebuilt in the blog repository.
 
