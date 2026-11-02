@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "ip",
+  "main": "src/index.ts",
+  "account_id": "2a190a563d8c90115322b4931de73d5c",
+  "compatibility_date": "2026-10-02",
+  "workers_dev": false,
+  "routes": [{ "pattern": "ip.lucas04.top", "custom_domain": true }],
+  // public/ 里的跳转链（_redirects）和 hop.txt 由静态资源层直接响应，不计 Worker 请求数。
+  "assets": { "directory": "./public" },
+  // 这里处理的全是访客 IP 和请求头，不开启 Workers Logs。
+  "observability": { "enabled": false },
+}
